@@ -11,6 +11,7 @@ package ahocorasick
 
 import (
 	"container/list"
+	"fmt"
 )
 
 // A node in the trie structure used to implement Aho-Corasick
@@ -81,66 +82,60 @@ func (m *Matcher) getFreeNode() *node {
 		m.root.root = true
 	}
 
+	if m.extent > len(m.trie) {
+		m.trie = append(m.trie, node{})
+		fmt.Println(m.extent, len(m.trie))
+	}
+
 	return &m.trie[m.extent-1]
 }
 
-// buildTrie builds the fundamental trie structure from a set of
-// blices.
-func (m *Matcher) buildTrie(dictionary [][]byte) {
-
-	// Work out the maximum size for the trie (all dictionary entries
-	// are distinct plus the root). This is used to preallocate memory
-	// for it.
-
-	max := 1
-	for _, blice := range dictionary {
-		max += len(blice)
-	}
-	m.trie = make([]node, max)
+// NewMatcher creates a new Matcher used to match against a set of
+// blices
+func NewMatcher() *Matcher {
+	m := new(Matcher)
+	m.trie = make([]node, 1)
 
 	// Calling this an ignoring its argument simply allocated
 	// m.trie[0] which will be the root element
 
 	m.getFreeNode()
+	return m
+}
 
-	// This loop builds the nodes in the trie by following through
-	// each dictionary entry building the children pointers.
+func (m *Matcher) Append(blice []byte, i int) {
+	n := m.root
+	var path []byte
+	for _, b := range blice {
+		path = append(path, b)
 
-	for i, blice := range dictionary {
-		n := m.root
-		var path []byte
-		for _, b := range blice {
-			path = append(path, b)
+		c := n.child[int(b)]
 
-			c := n.child[int(b)]
+		if c == nil {
+			c = m.getFreeNode()
+			n.child[int(b)] = c
+			c.b = make([]byte, len(path))
+			copy(c.b, path)
 
-			if c == nil {
-				c = m.getFreeNode()
-				n.child[int(b)] = c
-				c.b = make([]byte, len(path))
-				copy(c.b, path)
+			// Nodes directly under the root node will have the
+			// root as their fail point as there are no suffixes
+			// possible.
 
-				// Nodes directly under the root node will have the
-				// root as their fail point as there are no suffixes
-				// possible.
-
-				if len(path) == 1 {
-					c.fail = m.root
-				}
-
-				c.suffix = m.root
+			if len(path) == 1 {
+				c.fail = m.root
 			}
-
-			n = c
+			c.suffix = m.root
 		}
-
-		// The last value of n points to the node representing a
-		// dictionary entry
-
-		n.output = true
-		n.index = i
+		n = c
 	}
 
+	// The last value of n points to the node representing a
+	// dictionary entry
+	n.output = true
+	n.index = i
+}
+
+func (m *Matcher) Finalize() {
 	l := new(list.List)
 	l.PushBack(m.root)
 
@@ -184,36 +179,9 @@ func (m *Matcher) buildTrie(dictionary [][]byte) {
 			m.trie[i].fails[c] = n
 		}
 	}
-
 	m.trie = m.trie[:m.extent]
 }
 
-// NewMatcher creates a new Matcher used to match against a set of
-// blices
-func NewMatcher(dictionary [][]byte) *Matcher {
-	m := new(Matcher)
-
-	m.buildTrie(dictionary)
-
-	return m
-}
-
-// NewStringMatcher creates a new Matcher used to match against a set
-// of strings (this is a helper to make initialization easy)
-func NewStringMatcher(dictionary []string) *Matcher {
-	m := new(Matcher)
-
-	var d [][]byte
-	for _, s := range dictionary {
-		d = append(d, []byte(s))
-	}
-
-	m.buildTrie(d)
-
-	return m
-}
-
-// Match searches in for blices and returns all the blices found as
 // indexes into the original dictionary
 func (m *Matcher) Match(in []byte) []int {
 	m.counter += 1

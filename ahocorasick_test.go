@@ -17,19 +17,28 @@ func assert(t *testing.T, b bool) {
 }
 
 func TestNoPatterns(t *testing.T) {
-	m := NewStringMatcher([]string{})
+	m := NewMatcher()
 	hits := m.Match([]byte("foo bar baz"))
 	assert(t, len(hits) == 0)
 }
 
 func TestNoData(t *testing.T) {
-	m := NewStringMatcher([]string{"foo", "baz", "bar"})
+	m := NewMatcher()
+	m.Append([]byte("foo"), 0)
+	m.Append([]byte("bar"), 1)
+	m.Append([]byte("baz"), 2)
+	m.Finalize()
 	hits := m.Match([]byte(""))
 	assert(t, len(hits) == 0)
 }
 
 func TestSuffixes(t *testing.T) {
-	m := NewStringMatcher([]string{"Superman", "uperman", "perman", "erman"})
+	m := NewMatcher()
+	m.Append([]byte("Superman"), 0)
+	m.Append([]byte("uperman"), 1)
+	m.Append([]byte("perman"), 2)
+	m.Append([]byte("erman"), 3)
+	m.Finalize()
 	hits := m.Match([]byte("The Man Of Steel: Superman"))
 	assert(t, len(hits) == 4)
 	assert(t, hits[0] == 0)
@@ -39,7 +48,13 @@ func TestSuffixes(t *testing.T) {
 }
 
 func TestPrefixes(t *testing.T) {
-	m := NewStringMatcher([]string{"Superman", "Superma", "Superm", "Super"})
+	m := NewMatcher()
+	m.Append([]byte("Superman"), 0)
+	m.Append([]byte("uperman"), 1)
+	m.Append([]byte("perman"), 2)
+	m.Append([]byte("erman"), 3)
+	m.Finalize()
+
 	hits := m.Match([]byte("The Man Of Steel: Superman"))
 	assert(t, len(hits) == 4)
 	assert(t, hits[0] == 3)
@@ -49,7 +64,12 @@ func TestPrefixes(t *testing.T) {
 }
 
 func TestInterior(t *testing.T) {
-	m := NewStringMatcher([]string{"Steel", "tee", "e"})
+	m := NewMatcher()
+	m.Append([]byte("Steel"), 0)
+	m.Append([]byte("tee"), 1)
+	m.Append([]byte("e"), 2)
+	m.Finalize()
+
 	hits := m.Match([]byte("The Man Of Steel: Superman"))
 	assert(t, len(hits) == 3)
 	assert(t, hits[2] == 0)
@@ -58,7 +78,12 @@ func TestInterior(t *testing.T) {
 }
 
 func TestMatchAtStart(t *testing.T) {
-	m := NewStringMatcher([]string{"The", "Th", "he"})
+	m := NewMatcher()
+	m.Append([]byte("The"), 0)
+	m.Append([]byte("Th"), 1)
+	m.Append([]byte("he"), 2)
+	m.Finalize()
+
 	hits := m.Match([]byte("The Man Of Steel: Superman"))
 	assert(t, len(hits) == 3)
 	assert(t, hits[0] == 1)
@@ -67,7 +92,12 @@ func TestMatchAtStart(t *testing.T) {
 }
 
 func TestMatchAtEnd(t *testing.T) {
-	m := NewStringMatcher([]string{"teel", "eel", "el"})
+	m := NewMatcher()
+	m.Append([]byte("teel"), 0)
+	m.Append([]byte("eel"), 1)
+	m.Append([]byte("el"), 2)
+	m.Finalize()
+
 	hits := m.Match([]byte("The Man Of Steel"))
 	assert(t, len(hits) == 3)
 	assert(t, hits[0] == 0)
@@ -76,7 +106,12 @@ func TestMatchAtEnd(t *testing.T) {
 }
 
 func TestOverlappingPatterns(t *testing.T) {
-	m := NewStringMatcher([]string{"Man ", "n Of", "Of S"})
+	m := NewMatcher()
+	m.Append([]byte("Man"), 0)
+	m.Append([]byte("n Of"), 1)
+	m.Append([]byte("Of S"), 2)
+	m.Finalize()
+
 	hits := m.Match([]byte("The Man Of Steel"))
 	assert(t, len(hits) == 3)
 	assert(t, hits[0] == 0)
@@ -85,7 +120,12 @@ func TestOverlappingPatterns(t *testing.T) {
 }
 
 func TestMultipleMatches(t *testing.T) {
-	m := NewStringMatcher([]string{"The", "Man", "an"})
+	m := NewMatcher()
+	m.Append([]byte("The"), 0)
+	m.Append([]byte("Man"), 1)
+	m.Append([]byte("an"), 2)
+	m.Finalize()
+
 	hits := m.Match([]byte("A Man A Plan A Canal: Panama, which Man Planned The Canal"))
 	assert(t, len(hits) == 3)
 	assert(t, hits[0] == 1)
@@ -94,7 +134,12 @@ func TestMultipleMatches(t *testing.T) {
 }
 
 func TestSingleCharacterMatches(t *testing.T) {
-	m := NewStringMatcher([]string{"a", "M", "z"})
+	m := NewMatcher()
+	m.Append([]byte("a"), 0)
+	m.Append([]byte("M"), 1)
+	m.Append([]byte("z"), 2)
+	m.Finalize()
+
 	hits := m.Match([]byte("A Man A Plan A Canal: Panama, which Man Planned The Canal"))
 	assert(t, len(hits) == 2)
 	assert(t, hits[0] == 1)
@@ -102,13 +147,26 @@ func TestSingleCharacterMatches(t *testing.T) {
 }
 
 func TestNothingMatches(t *testing.T) {
-	m := NewStringMatcher([]string{"baz", "bar", "foo"})
+	m := NewMatcher()
+	m.Append([]byte("baz"), 0)
+	m.Append([]byte("bar"), 1)
+	m.Append([]byte("foo"), 2)
+	m.Finalize()
+
 	hits := m.Match([]byte("A Man A Plan A Canal: Panama, which Man Planned The Canal"))
 	assert(t, len(hits) == 0)
 }
 
 func TestWikipedia(t *testing.T) {
-	m := NewStringMatcher([]string{"a", "ab", "bc", "bca", "c", "caa"})
+	m := NewMatcher()
+	m.Append([]byte("a"), 0)
+	m.Append([]byte("ab"), 1)
+	m.Append([]byte("bc"), 2)
+	m.Append([]byte("bca"), 3)
+	m.Append([]byte("c"), 4)
+	m.Append([]byte("caa"), 5)
+	m.Finalize()
+
 	hits := m.Match([]byte("abccab"))
 	assert(t, len(hits) == 4)
 	assert(t, hits[0] == 0)
@@ -130,7 +188,14 @@ func TestWikipedia(t *testing.T) {
 }
 
 func TestMatch(t *testing.T) {
-	m := NewStringMatcher([]string{"Mozilla", "Mac", "Macintosh", "Safari", "Sausage"})
+	m := NewMatcher()
+	m.Append([]byte("Mozilla"), 0)
+	m.Append([]byte("Mac"), 1)
+	m.Append([]byte("Macintosh"), 2)
+	m.Append([]byte("Safari"), 3)
+	m.Append([]byte("Sausage"), 4)
+	m.Finalize()
+
 	hits := m.Match([]byte("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/30.0.1599.101 Safari/537.36"))
 	assert(t, len(hits) == 4)
 	assert(t, hits[0] == 0)
@@ -160,7 +225,30 @@ func TestMatch(t *testing.T) {
 var bytes = []byte("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_7_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/30.0.1599.101 Safari/537.36")
 var sbytes = string(bytes)
 var dictionary = []string{"Mozilla", "Mac", "Macintosh", "Safari", "Sausage"}
-var precomputed = NewStringMatcher(dictionary)
+var dictionary2 = []string{"Googlebot", "bingbot", "msnbot", "Yandex", "Baiduspider"}
+var dictionary3 = []string{"Mozilla", "Mac", "Macintosh", "Safari", "Phoenix"}
+var dictionary4 = []string{"12343453", "34353", "234234523", "324234", "33333"}
+var dictionary5 = []string{"12343453", "34353", "234234523", "324234", "33333", "experimental", "branch", "of", "the", "Mozilla", "codebase", "by", "Dave", "Hyatt", "Joe", "Hewitt", "and", "Blake", "Ross", "mother", "frequently", "performed", "in", "concerts", "around", "the", "village", "uses", "the", "Gecko", "layout", "engine"}
+var precomputed = NewMatcher()
+var precomputed2 = NewMatcher()
+var precomputed3 = NewMatcher()
+var precomputed4 = NewMatcher()
+var precomputed5 = NewMatcher()
+
+func fillTestData(m *Matcher, dict []string) {
+	for i, s := range dict {
+		m.Append([]byte(s), i)
+	}
+	m.Finalize()
+}
+
+func init() {
+	fillTestData(precomputed, dictionary)
+	fillTestData(precomputed2, dictionary2)
+	fillTestData(precomputed3, dictionary3)
+	fillTestData(precomputed4, dictionary4)
+	fillTestData(precomputed5, dictionary5)
+}
 
 func BenchmarkMatchWorks(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -186,9 +274,6 @@ func BenchmarkRegexpWorks(b *testing.B) {
 		re.FindAllIndex(bytes, -1)
 	}
 }
-
-var dictionary2 = []string{"Googlebot", "bingbot", "msnbot", "Yandex", "Baiduspider"}
-var precomputed2 = NewStringMatcher(dictionary2)
 
 func BenchmarkMatchFails(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -218,9 +303,6 @@ func BenchmarkRegexpFails(b *testing.B) {
 var bytes2 = []byte("Firefox is a web browser, and is Mozilla's flagship software product. It is available in both desktop and mobile versions. Firefox uses the Gecko layout engine to render web pages, which implements current and anticipated web standards. As of April 2013, Firefox has approximately 20% of worldwide usage share of web browsers, making it the third most-used web browser. Firefox began as an experimental branch of the Mozilla codebase by Dave Hyatt, Joe Hewitt and Blake Ross. They believed the commercial requirements of Netscape's sponsorship and developer-driven feature creep compromised the utility of the Mozilla browser. To combat what they saw as the Mozilla Suite's software bloat, they created a stand-alone browser, with which they intended to replace the Mozilla Suite. Firefox was originally named Phoenix but the name was changed so as to avoid trademark conflicts with Phoenix Technologies. The initially-announced replacement, Firebird, provoked objections from the Firebird project community. The current name, Firefox, was chosen on February 9, 2004.")
 var sbytes2 = string(bytes2)
 
-var dictionary3 = []string{"Mozilla", "Mac", "Macintosh", "Safari", "Phoenix"}
-var precomputed3 = NewStringMatcher(dictionary3)
-
 func BenchmarkLongMatchWorks(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		precomputed3.Match(bytes2)
@@ -246,9 +328,6 @@ func BenchmarkLongRegexpWorks(b *testing.B) {
 	}
 }
 
-var dictionary4 = []string{"12343453", "34353", "234234523", "324234", "33333"}
-var precomputed4 = NewStringMatcher(dictionary4)
-
 func BenchmarkLongMatchFails(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		precomputed4.Match(bytes2)
@@ -273,9 +352,6 @@ func BenchmarkLongRegexpFails(b *testing.B) {
 		re4.FindAllIndex(bytes2, -1)
 	}
 }
-
-var dictionary5 = []string{"12343453", "34353", "234234523", "324234", "33333", "experimental", "branch", "of", "the", "Mozilla", "codebase", "by", "Dave", "Hyatt", "Joe", "Hewitt", "and", "Blake", "Ross", "mother", "frequently", "performed", "in", "concerts", "around", "the", "village", "uses", "the", "Gecko", "layout", "engine"}
-var precomputed5 = NewStringMatcher(dictionary5)
 
 func BenchmarkMatchMany(b *testing.B) {
 	for i := 0; i < b.N; i++ {
